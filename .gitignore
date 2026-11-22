@@ -38,3 +38,6 @@ target/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# 职业规划访谈本地私享活档案（不入库）
+career-discovery/
