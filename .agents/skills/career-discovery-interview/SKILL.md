@@ -6,134 +6,128 @@ description: >-
   static onboarding questionnaires into ultra-short, single-focus turns grounded
   in recognizable Feishu group scenes, maintains living private artifacts under
   career-discovery/ (profile.md and evolution-log.md), and optionally publishes
-  or updates in-place a permanent Feishu Cloud Doc / Gist partner card link ready
-  for the student's Feishu profile bio. Activate when a student wants to clarify
-  interests, strengths vs. novice fear, time redlines, multi-objective
-  trade-offs, review how recent base work changed their self-understanding, or
-  create/update a shareable teammate-matching bio card. Do NOT use for community
-  mobilization, group-chat nagging, attendance scoring, or centralized HR
-  screening.
+  or updates in-place a rich Feishu Cloud Doc personal homepage card (DocxXML +
+  embedded HTML5 Bento grid + clickable Feishu avatar for 1-click DM) ready for
+  the student's Feishu profile bio. Zero Git or GitHub requirement. Activate when
+  a student wants to clarify interests, strengths vs. novice fear, time redlines,
+  multi-objective trade-offs, review how recent base work changed their
+  self-understanding, or create/update a shareable teammate-matching bio card.
+  Do NOT use for community mobilization, group-chat nagging, attendance scoring,
+  or centralized HR screening.
 ---
 
-# Career Discovery & Living Self-Knowledge Interview
+# Career Discovery & Living Self-Knowledge — Agent Execution Runbook
 
-This skill implements [CONSTITUTION.md](./CONSTITUTION.md) (`v0.6`). It runs locally on the student's own computer, serving **exclusively the student's genuine growth and rational decision-making**.
-
----
-
-## Step 0: Pre-Flight Local State, Ambient Feishu Context & Privacy Check
-
-Run these checks silently in parallel **before** asking your first question:
-
-1. **Check Existing Living Profile (`先读后问`)**:
-   - Check whether `career-discovery/profile.md` (and `career-discovery/.card-link.json`) already exists in the workspace.
-   - **Never** re-interview a returning student from scratch if `career-discovery/profile.md` exists—read it first so you can greet them with their current version (`vN`), path, and previous 14-day MVP hypothesis.
-2. **Sample De-Identified Feishu Group Scenes for "Aha!" Resonance (Optional, Graceful Fallback)**:
-   - Run the read-only, PII-scrubbed sampler (resolve `scripts/sample_feishu_scenes.py` relative to the workspace root or this `SKILL.md`'s directory):
-     ```bash
-     python3 .agents/skills/career-discovery-interview/scripts/sample_feishu_scenes.py
-     ```
-   - **How to use sampled fragments**:
-     - If `status == "ok"`, hold 2–3 recognizable themes lightly in mind as **resonance hooks**—alluding casually to the *kind* of problem happening in the groups (e.g., *"像最近群里聊到的把零散讨论理成清晰规则，或者把卡住的工作流跑通"*) so the student gets an instant **"Aha, I know exact scene!"** feeling.
-     - **Never** quote messages verbatim, **never** mention personal names or group IDs, **never** over-specify minor details, and if `status != "ok"` (e.g., `lark-cli` not configured), fall back silently to the scenarios in `references/*.md` without mentioning any error.
-3. **Load Diagnostic Reference Anchors Progressively**:
-   - **First-time interview (`Mode A` or `Mode B`)**: Read [references/riasec-efficacy-questionnaire.md](./references/riasec-efficacy-questionnaire.md), [references/career-anchors-antivision-questionnaire.md](./references/career-anchors-antivision-questionnaire.md), and [references/multi-objective-dyl-questionnaire.md](./references/multi-objective-dyl-questionnaire.md).
-   - **Returning update (`Mode C` or `Mode D`)**: Read Section 五 of [references/multi-objective-dyl-questionnaire.md](./references/multi-objective-dyl-questionnaire.md); load the other two reference files only if capability quadrants or core anchors shifted.
-4. **Git Privacy Protection**:
-   - Before writing artifacts in a Git repo (`git rev-parse --git-path info/exclude`), ensure `/career-discovery/profile.md`, `/career-discovery/evolution-log.md`, and `/career-discovery/.card-link.json` are listed in `.git/info/exclude` (if not already ignored or tracked).
+Operational state machine implementing [CONSTITUTION.md](./CONSTITUTION.md) (`v1.0`). Consult `CONSTITUTION.md` for normative principles and ethical boundaries; follow this file for exact execution mechanics, state transitions, tool calls, and artifact compilation.
 
 ---
 
-## Step 1: Select Session Mode
+## Phase 0: Pre-Flight Pipeline (Silent Parallel Execution)
 
-| Mode | Condition | Default Turn Rhythm | Goal |
+Execute these three reads/commands **in parallel before sending your first reply**:
+
+1. **Inspect Local Living State**:
+   - Check if `career-discovery/profile.md` exists (and read it if present, noting `Profile-Version`, `Current-Path`, and Section 四's 14-day MVP).
+   - Check if `career-discovery/.card-link.json` exists (stores `feishu_doc_id` and `feishu_url` for in-place homepage updates).
+2. **Sample Ambient Feishu Group Context (`sample_feishu_scenes.py`)**:
+   ```bash
+   python3 .agents/skills/career-discovery-interview/scripts/sample_feishu_scenes.py --max-chats 3 --snippets-per-chat 5
+   ```
+   *(If invoked from another working directory, resolve `scripts/sample_feishu_scenes.py` relative to this `SKILL.md` file.)*
+   - **Transform raw output into soft "Aha!" hooks**: Extract 2–3 recurring *problem archetypes* from `sampled_themes` (e.g., scattered rules needing indexing, half-built AI workflow debugging, storyboard iteration, onboarding friction). Strip any specific event timestamps or identifiable phrasing.
+   - If `status != "ok"`, silently use the domain scenes in `references/`—never mention CLI errors to the student.
+3. **Load Reference Files by State**:
+   - Always load [references/dialogue-and-copy-examples.md](./references/dialogue-and-copy-examples.md) for calibrated question phrasing, quick-pick card formatting, sanitization examples, and bio rhetoric patterns.
+   - **If `profile.md` is absent (Initial Interview)**: Load all three diagnostic libraries in parallel:
+     - [references/riasec-efficacy-questionnaire.md](./references/riasec-efficacy-questionnaire.md)
+     - [references/career-anchors-antivision-questionnaire.md](./references/career-anchors-antivision-questionnaire.md)
+     - [references/multi-objective-dyl-questionnaire.md](./references/multi-objective-dyl-questionnaire.md)
+   - **If `profile.md` exists (Returning Update)**: Load [references/multi-objective-dyl-questionnaire.md](./references/multi-objective-dyl-questionnaire.md) (§五); load the other two only if quadrants or anchors changed.
+
+---
+
+## Phase 1: Mode Selection & Dialogue State Machine
+
+### 1.1 Entry Routing Logic
+
+```text
+career-discovery/profile.md exists?
+├── NO  ──► Greet briefly (reassure local-only privacy) + check if student has a clear prior plan:
+│           ├── Unsure / first-time exploring ──► Mode B (6–10 short turns)
+│           └── Has prior plan / clear goal   ──► Mode A (5–8 short turns)
+└── YES ──► Greet referencing current v<N> hypothesis + route by student's opening intent:
+            ├── Finished a task / 2-week cycle / stage shift ──► Mode C (3–5 short turns)
+            └── Wants to log 1 quick event / boundary / date  ──► Mode D (1–2 short turns)
+```
+
+- **Early Stop-Loss Transition**: At any turn, if fundamental goals or weekly time floors irreconcilably conflict with active base tracks, skip remaining diagnostic turns and jump straight to **Phase 2 (`Path A`)** within 3–4 turns.
+- **Open Continuation Override**: Default turn counts bound *your questioning*, never the student's curiosity. Keep conversing warmly whenever the student elaborates or asks to dig deeper.
+
+### 1.2 Hard Turn-Formatting Constraints
+
+Enforce on **every conversational message** (except the single Quick-Pick Card turn):
+- **Length & Punctuation Gate**: Empathy/acknowledgment ≤ 1 short sentence; **question body ≤ 60 Chinese characters with strictly ONE `?` / `？`**. Optional scene prompts go as 2–3 short bullets (`≤ 12` words each) below the question, never stuffed inside the sentence.
+- **Forbidden Compound Constructions**: Never combine two diagnostic targets in one turn. Ban `顺便问一句`, `顺便排个雷`, `另外`, `同时`, `一方面…另一方面…`, and `哪部分是长板，哪部分是新挑战？`.
+- **Zero Jargon Leak**: Never output `RIASEC`, `Bandura`, `自我效能`, `Schein`, `职业锚`, `Keeney`, `MCDA`, or `帕累托` to the student.
+
+### 1.3 State Transitions per Mode
+
+*(See [references/dialogue-and-copy-examples.md](./references/dialogue-and-copy-examples.md) for concrete phrasing across every state.)*
+
+#### `Mode B` State Sequence (Beginner, 6–10 turns)
+1. `B1_ENTRY` → Confirm local privacy + ask whether starting fresh or already holding a plan.
+2. `B2_ENERGY` → Elicit 1 concrete recent moment of flow/absorption vs. dread (`Ref 3 §四.1`).
+3. `B3_SCENE_RESONANCE` → Offer 3 short base scene hooks (lightly echoing sampled Feishu themes + `Ref 1 §一`); identify instinctive pull.
+4. `B4_SCAFFOLD_PROBE` → On an appealing-but-intimidating area, run the "80% template + AI co-pilot" test (`Ref 1 §二.2`) to separate `Q2 潜能破冰区` from `Q4 直接规避区`.
+5. `B5_BURNOUT_PROBE` → Dedicated separate turn testing `Q3 伪优势消耗区` ("competent chores others rely on you for that you refuse to repeat here", `Ref 1 §二.4`).
+6. `B6_QUICK_CARD` → Send the **1-Turn Hard Constraints & Anti-Vision Quick-Pick Card** (`Ref 3 §二` + `Ref 2 §三`) *before* goal trade-offs.
+7. `B7_ANCHOR_TRADEOFF` → Unpack fundamental gain (`Ref 3 §一`); if goals exceed `B6` hour budget, run 1 sharp A-vs-B dilemma (`Ref 2 §一`) to lock 1 primary goal + 1 joint-production synergy + explicit stage non-goals.
+8. `B8_PATH_CONFIRM` → Confirm solo (`Path C`) vs. partner (`Path D`) vs. exam pause (`Path B`) and sanity-check the 14-day MVP.
+
+#### `Mode A` State Sequence (Focused Starter, 5–8 turns)
+1. `A1_HYPOTHESIS` → Confirm local privacy + ask what core outcome they want from the base right now.
+2. `A2_STRENGTH_OR_STRETCH` → Using 2–3 Feishu-grounded scene hooks, probe their most energizing leverage point (`Q1` / `Q2`).
+3. `A3_BURNOUT_PROBE` → **Separate turn**: probe high-skill/low-desire chores (`Q3`) to wall off.
+4. `A4_QUICK_CARD` → Send the **1-Turn Hard Constraints & Anti-Vision Quick-Pick Card**.
+5. `A5_BUDGETED_SYNTHESIS` → Lock #1 anchor + 1 synergy move + explicit non-goals + `Path A/B/C/D` routing.
+
+#### `Mode C` & `Mode D` Calibration Rules (Returning Student)
+
+Apply this evidence-mapping table when updating `profile.md` (`vN → vN+1`) and `evolution-log.md`:
+
+| Observed Student Report | State Mutation Rule |
+| :--- | :--- |
+| Tried a `Q2 潜能破冰区` task with scaffolding and felt energized / succeeded | **Promote** item `Q2 → Q1 核心优势区`; record mastery evidence in `evolution-log.md` |
+| Tried a hypothesized goal/role and felt visceral dread or meaningless friction | **Move** item to `Q4 直接规避区` or `反愿景红线`; frame explicitly as **successful de-risking**, never failure |
+| Found peers repeatedly dumping a familiar chore on them that drains energy | **Add** to `Q3 伪优势防消耗区` (`≤15%` cap) + add neutral boundary to `partner-card.md` `Avoid` |
+| Hit midterms, thesis, contests, or temporary workload spike | **Mutate ONLY** `Weekly-Budget` / `Schedule-Blackout` (or switch temporarily to `Path B`); **do NOT alter** underlying quadrants or core anchors |
+
+---
+
+## Phase 2: Routing Gate & Mandatory Disclosures
+
+### 2.1 Four-Way Routing Matrix
+
+| Route | Trigger Condition | Artifacts to Write/Update | Feishu Cloud Homepage Action |
 | :--- | :--- | :--- | :--- |
-| **Mode B: Beginner Discovery** | No `profile.md` + student feels unsure / hasn't done structured career planning | **6–10 turns** | Start from concrete energizing/draining moments; build `v1` baseline |
-| **Mode A: Focused Initial Interview** | No `profile.md` + student already has prior career planning or a clear hypothesis | **5–8 turns** | Stress-test existing goals, split strengths vs. burnout traps across short turns; build `v1` baseline |
-| **Mode C: Post-Work Calibration** | `profile.md` exists + student finished a task / 2-week cycle / hit a semester shift | **3–5 turns** | Compare last hypothesis vs. lived reality; update `profile.md` (`vN+1`), append `evolution-log.md`, refresh bio card link in place |
-| **Mode D: Quick Micro-Update** | `profile.md` exists + student wants to log one new insight, redline, or schedule change | **1–2 turns** | Surgically update the affected section + append `evolution-log.md` + sync bio card link if needed |
+| **`Path A`** (Stop-Loss) | Core goal or time floor irreconcilable with current base tracks | `profile.md` (concise stop-loss) + `evolution-log.md` | Do NOT publish *(warn if old `.card-link.json` exists)* |
+| **`Path B`** (Silent Window) | Aligned, but in exam/deadline blackout or choosing temporary observation | `profile.md` (blackout + resume trigger) + `evolution-log.md` | Do NOT publish *(warn if old `.card-link.json` exists)* |
+| **`Path C`** (Solo MVP) | Staying, prefers independent execution (`AU` / solo standard course) | `profile.md` + `evolution-log.md` | Only if student explicitly asks |
+| **`Path D`** (Partnering) | Staying and wants complementary collaboration | `profile.md` + `evolution-log.md` + `partner-card.md` | Compile & publish/update rich Feishu homepage |
 
-- **Early Misalignment Stop (`3–4 turns`)**: If severe misalignment with current base tracks is clear within 3–4 turns, stop asking filler questions and move honestly to **Path A (Graceful Stop-Loss)**.
-- **Student-Led Open Continuation Right**: Turn caps constrain *Agent interrogation*, never the student. Whenever the student wants to keep chatting or go deeper, follow their lead warmly.
+### 2.2 Mandatory `If-Then` Governance Disclosures
 
----
-
-## Step 2: Conduct the Heuristic Dialogue (Strict Brevity Rules)
-
-### Hard Question-Writing Rules (Read Before Every Turn!)
-
-1. **≤ 60 Chinese Characters & Strictly ONE Question Mark (`？`)**:
-   - Apart from a brief 1-sentence empathetic reflection, **the question itself MUST be 1–2 short sentences (≤ 60 Chinese characters) containing at most ONE `?` / `？`**.
-   - If the student might need examples, append at most **2–3 short bullet phrases (≤ 12 words each)** underneath—never bury clauses inside a giant paragraph question.
-2. **ZERO Compound / Piggyback Questions (`严禁连带追问`)**:
-   - **FORBIDDEN phrases**: `顺便问一句`、`顺便排个雷`、`另外`、`同时`、`哪部分是长板，哪部分是新挑战？`、`一方面…另一方面…`.
-   - **Anti-Example (NEVER write this!)**:
-     > ❌ *“对照‘诊断组织痛点’和‘深入一线搭工具’这两块，哪部分是你做起来顺手又来劲的长板，哪部分是你最想突破的新挑战？顺便也排个雷——有没有哪类别人常找你兜底、但你这次绝不想再耗进去的熟手苦差事？”* (Bundles Q1 + Q2 + Q3 into one exhausting block!)
-   - **Good Split (ALWAYS do this instead!)**:
-     > ✅ *Turn N*: “像最近群里聊到的‘理清混乱规则’和‘亲手把工作流跑通’，哪一类你做起来最顺手来劲？”
-     > ✅ *Turn N+1*: “反过来排个雷：有没有哪类活你其实很会干、别人也爱找你兜底，但这次你绝不想再耗时间了？”
-3. **1-Turn Quick-Pick Card Exception for Logistics**:
-   - Objective hard constraints (`每周净时长`、`整碎形态`、`未来 4 周考试/死线静默期`、`模糊度承受力`) + `2–3 条反愿景时间红线勾选` may be presented as **1 clean, compact quick-pick card** (or `ask_question` UI widget if available) **before** goal allocation.
-4. **Plain Language & Zero Fabrication**:
-   - Never use academic labels (`RIASEC`, `Bandura`, `Schein`, `Keeney`, `帕累托`) with the student.
-   - Any 2×2 quadrant not surfaced/verified in the session **must** be marked `本次未涉及/待后续实战观察`.
+Inject into `profile.md` Section 三 (and mention naturally in summary) whenever triggered:
+- **`IF` student values internship certificates / vouchers / formal endorsements**: Remind them that QuantTide certification standards evolve via community resolutions (some drafts may lack enacted thresholds); advise verifying currently enacted written resolutions with the secretariat / member representatives first.
+- **`IF` student selects `Path B` (silent window / light observation) or has multi-week exam blackouts**: Remind them objectively that QuantTide has historically run inactivity confirmation checks, so unannounced silence risks accidental removal; advise watching for willingness-check notices or noting temporary leave windows per group conventions.
 
 ---
 
-### Turn Blueprints by Mode (1 Cognitive Target Per Turn)
+## Phase 3: Artifact Compilation & Feishu Personal Homepage Publishing
 
-#### Mode B: Beginner Discovery (`6–10 short turns`)
-1. **Entry & Mode Check**: One warm sentence on local privacy + ask whether they already have a rough plan in mind or want to start from scratch.
-2. **Peak Energy Moment (`DYL`)**: Ask about 1 recent moment (in class, projects, or base) where they got absorbed and felt energized.
-3. **Scene Resonance (`RIASEC` + Feishu Aha Hook)**: Offer 3 short, recognizable base scenes (echoing sampled Feishu themes if available); ask which sparks curiosity.
-4. **Scaffolding Check (`Q2 Novice Fear` vs. `Q4 Blind Spot`)**: For an appealing-but-intimidating scene, ask: if given an 80%-working template + AI guidance, would they want to try it?
-5. **Burnout Trap Check (`Q3 Competence Trap`)**: Ask if there is a "reliable old skill" others praise them for that they actually want to avoid doing here.
-6. **Logistics & Anti-Vision Quick-Pick Card**: Align weekly hours, block/fragmented time, 4-week blackout dates, ambiguity comfort, and 2–3 Anti-Vision redlines (`T1–T9`) in 1 compact card.
-7. **Core Gain & Trade-Off (`Keeney` + `Schein`)**: Ask what single tangible gain matters most this month under that hour cap (using 1 sharp A-vs-B dilemma in the next turn if goals conflict).
-8. **Work Style & 2-Week MVP Check**: Ask whether they prefer solo closed-loop learning (`Path C`), finding a complementary partner (`Path D`), or temporary exam pause (`Path B`), then write artifacts.
+All local artifacts live in `career-discovery/` (created automatically). **Never fabricate unprobed 2×2 cells**—write `本次未涉及/待后续实战观察` for any cell without conversational evidence.
 
-#### Mode A: Focused Initial Interview (`5–8 short turns`)
-1. **Entry & Core Goal**: Reassure local privacy; ask what main outcome they hope to get from the base right now.
-2. **Strength vs. Stretch (`Q1` / `Q2`)**: Using 2–3 concrete scene hooks (blending sampled Feishu context lightly), ask which part they already do effortlessly vs. want to stretch into. *(Pick ONE question focus; follow up only if needed.)*
-3. **Burnout Trap Check (`Q3` — Separate Turn!)**: Ask separately what "competent chore" others often hand them that they want off-limits this time.
-4. **Logistics & Anti-Vision Quick-Pick Card**: Collect the 4 hard constraints + 2–3 Anti-Vision redlines in 1 compact card.
-5. **Budgeted Trade-Off**: Confirm the #1 priority + 1 "two-birds-one-stone" move + what to explicitly drop for the next 2 weeks.
-6. **Routing & Bio-Card Check**: Confirm solo (`Path C`) vs. partner (`Path D`) vs. silent pause (`Path B`) vs. stop-loss (`Path A`), then generate artifacts.
-
-#### Mode C: Post-Work Calibration (`3–5 short turns`)
-1. **Expectation vs. Reality**: Reference their current `profile.md` (`vN`) 14-day MVP; ask which concrete recent moment felt more energizing—or more draining—than expected.
-2. **Temporary Crunch vs. Core Shift**: Ask whether any needed change is just a temporary schedule crunch (update `Schedule-Blackout` only) or a real shift in what they enjoy/avoid (promote `Q2 → Q1`, or log a new Anti-Vision redline as successful de-risking).
-3. **Next 2-Week MVP & In-Place Link Sync**: Confirm the next 14-day step, update `profile.md` (`vN+1`) + `evolution-log.md`, and if on `Path D`, update `partner-card.md` and overwrite their existing Feishu Cloud Doc / Gist link in place!
-
-#### Mode D: Quick Micro-Update (`1–2 short turns`)
-1. **Capture Event & Apply Delta**: Confirm the concrete event and single update, write `profile.md` (`vN+1`) + `evolution-log.md`, and sync `partner-card.md` / cloud link in place if `Path D` fields changed.
-
----
-
-## Step 3: Governance Honesty & Scope Purity
-
-1. **Anti-`画饼` Disclosures**:
-   - **Certificate / Voucher Seekers**: Never promise automatic fixed-point certificate redemption; remind them QuantTide's certification rules evolve through community deliberation (some drafts may be unadopted) and advise checking currently enacted written resolutions with the secretariat / representatives first.
-   - **Light Observers / Exam Blackout (`Path B`)**: Objectively note that QuantTide has historically run inactivity confirmation/cleanup checks, so unannounced silence carries accidental-removal risk; advise watching for willingness-check notices or noting exam windows per group rules.
-2. **Strict Out-of-Scope Boundary**:
-   - Do **NOT** push students to speak in group chats or claim organizational tasks, do **NOT** score activity, and do **NOT** track students across sessions unprompted.
-
----
-
-## Step 4: Write Living Artifacts & Publish Permanent Feishu Bio Link
-
-### Routing Decision Matrix
-
-| Path | Condition | Local Artifacts Written (`career-discovery/`) | Cloud Link (`publish_partner_card.py`) |
-| :--- | :--- | :--- | :--- |
-| **Path A: Graceful Stop-Loss** | Severe misalignment with active base tracks | `profile.md` (stop-loss edition) + `evolution-log.md` | None |
-| **Path B: Temporary Silent Window** | Exam/deadline blackout or temporary observation | `profile.md` + `evolution-log.md` | None |
-| **Path C: Solo Closed-Loop MVP** | Staying, prefers solo learning/execution (`AU`) | `profile.md` + `evolution-log.md` | None (unless explicitly requested) |
-| **Path D: Complementary Partnering** | Staying and wants complementary teammates | `profile.md` + `evolution-log.md` + `partner-card.md` | Offer 1-click Feishu Cloud Doc (or Gist) permanent link + Feishu bio one-liner |
-
----
-
-### Artifact 1: `career-discovery/profile.md` (Private Current State)
+### 3.1 `career-discovery/profile.md` (Overwrite with Latest State `v<N>`)
 
 ```markdown
 # 个人自我洞察与多目标边界契约（私享活档案｜仅本人留存）
@@ -160,7 +154,7 @@ Run these checks silently in parallel **before** asking your first question:
 - **保底主目标（冲突时无条件优先）**：...
 - **一石二鸟协同设计**：...
 - **本阶段显式放弃项（防 FOMO 清单）**：...
-- **基地方向契合度与治理实情提示**：<坦诚契合度判断；按需附上核对现行书面证明决议 / 留意不活跃意愿确认提示>
+- **基地方向契合度与治理实情提示**：...
 
 ## 四、未来 14 天行动假设（2-Week MVP）
 - **本轮假设 / 阶段安排**：...
@@ -168,9 +162,7 @@ Run these checks silently in parallel **before** asking your first question:
 - **第 14 天继续 / 调整 / 止损信号**：...
 ```
 
----
-
-### Artifact 2: `career-discovery/evolution-log.md` (Private Append-Only Changelog)
+### 3.2 `career-discovery/evolution-log.md` (Create on `v1`; Append Only on `v2+`)
 
 ```markdown
 ## v<N>｜YYYY-MM-DD（<模式 A/B 初始建档 | 模式 C 实战复盘 | 模式 D 即时微更新>）
@@ -179,16 +171,10 @@ Run these checks silently in parallel **before** asking your first question:
 - **本次档案具体变更**：...
 ```
 
----
+### 3.3 `career-discovery/partner-card.md` + Rich Feishu Homepage (`Path D`)
 
-### Artifact 3: `career-discovery/partner-card.md` + Permanent Feishu Bio Link (`Path D`)
-
-1. **Sanitize `Avoid`**: Keep private complaints/motives strictly in `profile.md`; rewrite `Avoid` here into neutral task boundaries (e.g., *"暂不承接冷启动外联与高频同步长会"*).
-2. **Write `career-discovery/partner-card.md` first (Clean Reader-Facing Body)**:
-   - Keep `partner-card.md` clean for teammates who click the bio link—do **not** dump internal bio-draft options (`版本 A / B / C`) or unescaped `<...>` angle brackets inside `partner-card.md` (since `lark-cli docs +create` prepends `--title` automatically and parses `<tag>` as DocxXML).
-   - **Bio Copywriting Rule (`拒绝表单体，写出人味与修辞感`)**:
-     - **NEVER** write robotic form-style tags like `长板:xxx｜寻:xxx｜6h/周` and **NEVER** put weekly hours in the Feishu bio line!
-     - Present **2–3 tasteful, slightly literary/expressive one-liners** in chat (and store them in `.card-link.json` if helpful) paired with the published permanent URL (e.g., *“理乱麻、搭轻流之人，寻一位熟稔一线烟火的同路客 👉 https://...”*, *“拆解混沌机制、驭 AI 造小工具之人；寻一位懂基地脉络的破局搭档 👉 https://...”*).
+1. **Sanitize `Avoid` Before Writing**: Strip personal complaints, teammate grievances, or sensitive private motives; rewrite into neutral task-scope boundaries (see sanitization table in [references/dialogue-and-copy-examples.md](./references/dialogue-and-copy-examples.md)).
+2. **Write `career-discovery/partner-card.md`** using the exact three headings expected by the compiler (`## 一句话看懂我们怎么搭伙`, `## 协作接口`, `## 近期想试的 2 周小实验`):
 
 ```markdown
 ## 一句话看懂我们怎么搭伙
@@ -206,22 +192,37 @@ Run these checks silently in parallel **before** asking your first question:
 ---
 
 ## 近期想试的 2 周小实验
-<3–5 行真诚平实的小实验与分工邀约>
+<2–3 段真诚平实的小实验与分工邀约>
 
 ---
 Generated-At: YYYY-MM-DD
 Schema-Version: qt-partner-card/v1
 ```
 
-3. **Publish or Update Permanent Link (`scripts/publish_partner_card.py`)**:
-   - **First-time publish**: Show the student the local `partner-card.md` preview and ask 1 short confirmation: whether they want to generate a shareable Feishu Cloud Doc link now (and whether link visibility should be `组织内获得链接可读 [tenant_readable]` or `互联网获得链接可读 [anyone_readable]`). Once confirmed, run:
+3. **Compile & Publish Rich Feishu Personal Homepage (`publish_partner_card.py`)**:
+   - First-time `Path D`: Confirm with the student (1 short question) before opening link-read permission (`anyone_readable` or `tenant_readable`).
+   - Craft an expressive, non-form `--headline` and `--subheadline` tailored to the student's craft and vibe (see patterns in [references/dialogue-and-copy-examples.md](./references/dialogue-and-copy-examples.md)), then run:
      ```bash
      python3 .agents/skills/career-discovery-interview/scripts/publish_partner_card.py \
        --card career-discovery/partner-card.md \
        --state career-discovery/.card-link.json \
        --title "互补搭档协作名片" \
-       --share tenant_readable \
+       --headline "<个性化修辞主标题>" \
+       --subheadline "<个性化副标题>" \
+       --share anyone_readable \
        --confirm-share
      ```
-   - Present the returned permanent `url` embedded directly inside 2–3 expressive Feishu Bio candidates for the student to copy-paste into their Feishu profile!
-   - **Subsequent `Mode C / D` updates**: Whenever `career-discovery/.card-link.json` already exists and the student confirms refreshing their card, running `publish_partner_card.py` automatically **overwrites the existing Feishu Cloud Doc / Gist in place**—the URL in their Feishu bio never needs to be replaced!
+   - **What the script produces**:
+     - Generates `career-discovery/partner-card.html` (Bento-grid personal homepage) + `career-discovery/partner-card.xml` (top clickable `<cite type="user"/>` 1-click Feishu DM bar + embedded `<html5-block>` Bento homepage + bottom 2-column `<grid>` search digest).
+     - Creates a new Feishu Cloud Doc on first run or **overwrites the existing `feishu_doc_id` in place** on `v2+` updates so the bio URL never changes.
+   - **Auth Expiry Recovery**: If `publish_partner_card.py` reports a `lark-cli` token/auth error, guide or run `lark-cli auth login --recommend` and retry once; if `lark-cli` is not installed, hand the student the local `partner-card.md` path.
+   - **Deliver Bio Signatures**: Present 2–3 expressive, literary/human Feishu profile bio one-liners embedding the returned `url` (**no** `长板:xxx｜寻:xxx` tags, **no** weekly hours in the bio line).
+
+---
+
+## Phase 4: Closeout Verification Checklist
+
+Before sending your final summary turn, verify:
+- [ ] Unprobed quadrants in `profile.md` say `本次未涉及/待后续实战观察` (zero guessed traits).
+- [ ] `evolution-log.md` appended a new `v<N>` entry without overwriting prior `v1..v<N-1>` entries.
+- [ ] If `Path D`: `Avoid` in `partner-card.md` contains zero raw personal complaints, `publish_partner_card.py` returned `status: "ok"`, and all presented Feishu bio candidates omit form labels and weekly hours.
