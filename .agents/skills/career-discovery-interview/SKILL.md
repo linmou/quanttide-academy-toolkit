@@ -2,18 +2,21 @@
 name: career-discovery-interview
 description: >-
   Conduct a local, student-owned heuristic career-discovery interview or
-  post-work self-knowledge update for QuantTide training-base learners. Converts
-  static onboarding questionnaires into ultra-short, single-focus turns grounded
-  in recognizable Feishu group scenes, maintains living private artifacts under
-  career-discovery/ (profile.md and evolution-log.md), and optionally publishes
-  or updates in-place a rich Feishu Cloud Doc personal homepage card (DocxXML +
-  embedded HTML5 Bento grid + clickable Feishu avatar for 1-click DM) ready for
-  the student's Feishu profile bio. Zero Git or GitHub requirement. Activate when
-  a student wants to clarify interests, strengths vs. novice fear, time redlines,
-  multi-objective trade-offs, review how recent base work changed their
-  self-understanding, or create/update a shareable teammate-matching bio card.
-  Do NOT use for community mobilization, group-chat nagging, attendance scoring,
-  or centralized HR screening.
+  post-work self-knowledge update for QuantTide training-base learners. Discovers
+  available Feishu Cloud Docs and Wiki nodes first, maps them to diagnostic
+  questions, and asks the user which documents may be read before fetching them
+  (with de-identified Feishu group scene sampling as a fallback). Converts static
+  onboarding questionnaires into ultra-short, single-focus turns, maintains
+  living private artifacts under career-discovery/ (profile.md and
+  evolution-log.md), and optionally publishes or updates in-place a rich Feishu
+  Cloud Doc personal homepage card (DocxXML + embedded HTML5 Bento grid +
+  clickable Feishu avatar for 1-click DM) ready for the student's Feishu profile
+  bio. Zero Git or GitHub requirement. Activate when a student wants to clarify
+  interests, strengths vs. novice fear, time redlines, multi-objective
+  trade-offs, review how recent base work changed their self-understanding, or
+  create/update a shareable teammate-matching bio card. Do NOT use for community
+  mobilization, group-chat nagging, attendance scoring, or centralized HR
+  screening.
 ---
 
 # Career Discovery & Living Self-Knowledge — Agent Execution Runbook
@@ -22,20 +25,28 @@ Operational state machine implementing [CONSTITUTION.md](./CONSTITUTION.md) (`v1
 
 ---
 
-## Phase 0: Pre-Flight Pipeline (Silent Parallel Execution)
+## Phase 0: Pre-Flight Pipeline (Metadata Discovery & Reference Loading)
 
-Execute these three reads/commands **in parallel before sending your first reply**:
+Execute these reads/commands **in parallel before sending your first reply**:
 
 1. **Inspect Local Living State**:
    - Check if `career-discovery/profile.md` exists (and read it if present, noting `Profile-Version`, `Current-Path`, and Section 四's 14-day MVP).
    - Check if `career-discovery/.card-link.json` exists (stores `feishu_doc_id` and `feishu_url` for in-place homepage updates).
-2. **Sample Ambient Feishu Group Context (`sample_feishu_scenes.py`)**:
+2. **Discover Available Feishu Documents & Map to Diagnostic Questions (`discover_feishu_docs.py --mode discover`)**:
    ```bash
-   python3 .agents/skills/career-discovery-interview/scripts/sample_feishu_scenes.py --max-chats 3 --snippets-per-chat 5
+   python3 .agents/skills/career-discovery-interview/scripts/discover_feishu_docs.py --mode discover
    ```
-   *(If invoked from another working directory, resolve `scripts/sample_feishu_scenes.py` relative to this `SKILL.md` file.)*
-   - **Transform raw output into soft "Aha!" hooks**: Extract 2–3 recurring *problem archetypes* from `sampled_themes` (e.g., scattered rules needing indexing, half-built AI workflow debugging, storyboard iteration, onboarding friction). Strip any specific event timestamps or identifiable phrasing.
-   - If `status != "ok"`, silently use the domain scenes in `references/`—never mention CLI errors to the student.
+   *(If invoked from another working directory, resolve `scripts/discover_feishu_docs.py` relative to this `SKILL.md` file.)*
+   - **Zero Silent Body Reads**: `--mode discover` inspects **metadata only** (titles, Wiki spaces, shared doc tokens) and classifies documents into 5 question-mapped categories:
+     - **A. 公共第二大脑与治理章程库 (`governance_wiki`)** → `Ref 1 (C/I)`、`Ref 2 (GM/SE)` & Phase 2.2 证明/结项决议核验
+     - **B. 各部门任务书与业务方案 (`department_tasks`, recommended)** → `Ref 1 §一` RIASEC 六维真实任务情境 & `§二.2` 80%脚手架敏感度探针 (`B4` / `A2`)
+     - **C. 个人实训工作日志与工作汇报 (`work_logs_reports`, recommended)** → `Ref 3 §四.1` DYL 充能/耗能瞬间 (`B2`)、`Ref 1 §二` 四象限证据 & `Ref 3 §五` 实战复盘 (`Mode C`)
+     - **D. 会议纪要与研讨区文档 (`meeting_minutes`, recommended)** → `Ref 2 §三` 反愿景排查 (`T1–T9`) & `Ref 3 §一` 近期议题对齐
+     - **E. 个人文档库私密/小组归档 (`personal_library`, opt-in only)** → 默认绝不自动勾选，仅限用户显式点名某篇时读取
+   - **Optional Ambient Group Fallback (`sample_feishu_scenes.py`)**: If `discover_feishu_docs.py` returns `status != "ok"` or `"empty"` (or the user later prefers group scenes only), run:
+     ```bash
+     python3 .agents/skills/career-discovery-interview/scripts/sample_feishu_scenes.py --max-chats 3 --snippets-per-chat 5
+     ```
 3. **Load Reference Files by State**:
    - Always load [references/dialogue-and-copy-examples.md](./references/dialogue-and-copy-examples.md) for calibrated question phrasing, quick-pick card formatting, sanitization examples, and bio rhetoric patterns.
    - **If `profile.md` is absent (Initial Interview)**: Load all three diagnostic libraries in parallel:
@@ -46,7 +57,24 @@ Execute these three reads/commands **in parallel before sending your first reply
 
 ---
 
-## Phase 1: Mode Selection & Dialogue State Machine
+## Phase 1: Document Authorization Gate, Mode Selection & Dialogue State Machine
+
+### 1.0 Feishu Document Authorization Gate (Before Fetching Any Doc Body)
+
+Whenever `discover_feishu_docs.py --mode discover` finds accessible Feishu documents:
+1. **Present the Question-Mapped Document Menu & Ask Permission**:
+   - Briefly show the discovered document categories/titles and **why each category helps the interview questions** (e.g., B 类任务书用来映射具体业务场景与脚手架探针，C 类工作日志/汇报用来锚定充能瞬间与实战复盘，D 类纪要用来排查协作痛点).
+   - Use the host's `ask_question` multi-select tool (or a compact quick-pick card in the opening turn if `ask_question` is unavailable) so the user can check which categories or specific documents they authorize reading (recommending **B / C / D** by default and keeping **E** explicit-only).
+2. **Fetch Only User-Authorized Documents (`--mode fetch`)**:
+   - After the user selects authorized categories (`--categories B,C,D`) or specific document tokens (`--tokens <tok1,tok2>`), run:
+     ```bash
+     python3 .agents/skills/career-discovery-interview/scripts/discover_feishu_docs.py \
+       --mode fetch \
+       --categories "<USER_AUTHORIZED_CATEGORIES>" \
+       --tokens "<OPTIONAL_EXPLICIT_TOKENS>"
+     ```
+   - Transform `authorized_documents` into concrete, de-identified interview hooks (e.g., referencing the chuan-chuan/coffee mini-game scaffolding, Jinjiang novel promotion, Xiaohongshu account SOP, or second-brain boundary mapping without leaking third-party PII).
+   - If the user chooses not to read any Feishu docs, fall back to `sample_feishu_scenes.py` or the static scenes in `references/`.
 
 ### 1.1 Entry Routing Logic
 
